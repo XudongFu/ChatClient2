@@ -1,12 +1,9 @@
 package com.fuxudong.chatclient;
 
-import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
-import android.content.ServiceConnection;
 import android.graphics.Color;
 import android.os.Handler;
-import android.os.IBinder;
 import android.support.v4.view.PagerAdapter;
 import android.support.v4.view.ViewPager;
 import android.support.v7.app.AppCompatActivity;
@@ -47,7 +44,6 @@ public class MainActivity extends AppCompatActivity {
     ListView friendList;
     Handler myhandle=new Handler();
     ConnectionClient client;
-
     TreeMap<Integer,String> commDic=new TreeMap<>();
 
     Runnable show=new Runnable() {
@@ -57,12 +53,9 @@ public class MainActivity extends AppCompatActivity {
             if(count>=1)
             {
                 Message mess=client.queue.elementAt(0);
-
                 Node value=mess.getValue();
-               int from=Integer.valueOf(getNodeContent(value,"from"));
-                int to=Integer.valueOf(getNodeContent(value,"to"));
+                int from=Integer.valueOf(getNodeContent(value,"from"));
                 String content=getNodeContent(value,"content");
-
                 if(commDic.get(from)==null)
                 {
                     commDic.put(from,content);
@@ -77,33 +70,6 @@ public class MainActivity extends AppCompatActivity {
         }
     };
 
-
-    void startService()
-    {
-        Intent ser=new Intent(MainActivity.this,ReceiveComm.class);
-        startService(ser);
-
-        bindService(ser, new ServiceConnection() {
-            @Override
-            public void onServiceConnected(ComponentName name, IBinder service) {
-
-
-            }
-
-            @Override
-            public void onServiceDisconnected(ComponentName name) {
-
-            }
-        },BIND_AUTO_CREATE);
-
-    }
-
-
-
-
-
-
-
     @Override
     protected void onDestroy() {
         super.onDestroy();
@@ -111,8 +77,7 @@ public class MainActivity extends AppCompatActivity {
         stopService(ser);
     }
 
-    void refreshChatList()
-    {
+    void refreshChatList() {
         SimpleAdapter chatAdapter = new SimpleAdapter(context, getChatData(), R.layout.friendline
                 , new String[]{"name", "lastComm"}, new int[]{R.id.friendLineName, R.id.friendLineId}
         );
@@ -129,6 +94,8 @@ public class MainActivity extends AppCompatActivity {
         });
     }
 
+
+
     List<Map<String,String>> getChatData() {
         ArrayList<Map<String, String>> res = new ArrayList<>();
         Iterator<Integer> bianli = commDic.keySet().iterator();
@@ -143,9 +110,7 @@ public class MainActivity extends AppCompatActivity {
         return res;
     }
 
-
-    private String getNodeContent(Node parent,String nodeName)
-    {
+    private String getNodeContent(Node parent,String nodeName) {
         NodeList ls=parent.getChildNodes();
         for(int i=0;i<ls.getLength();i++)
         {
@@ -154,7 +119,6 @@ public class MainActivity extends AppCompatActivity {
         }
         return  null;
     }
-
 
     View.OnClickListener listener=new View.OnClickListener() {
         @Override
@@ -167,6 +131,26 @@ public class MainActivity extends AppCompatActivity {
                     break;
                 case "朋友":
                     pager.setCurrentItem(1);
+                    friends=localUser.getFriendList();
+                    myhandle.post(new Runnable() {
+                        @Override
+                        public void run() {
+                            SimpleAdapter chatAdapter = new SimpleAdapter(context, getData(), R.layout.friendline
+                                    , new String[]{"name", "id"}, new int[]{R.id.friendLineName, R.id.friendLineId}
+                            );
+                            friendList.setAdapter(chatAdapter);
+                            friendList.setBackgroundColor(Color.GRAY);
+                            friendList.setOnItemClickListener(new AdapterView.OnItemClickListener() {
+                                @Override
+                                public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
+                                    TextView p = (TextView) view.findViewById(R.id.friendLineId);
+                                    Intent start = new Intent(MainActivity.this, Communication.class);
+                                    start.putExtra("friendId", Integer.valueOf(p.getText().toString()));
+                                    startActivity(start);
+                                }
+                            });
+                        }
+                    });
                     break;
                 case "自己":
                     pager.setCurrentItem(2);
@@ -179,7 +163,6 @@ public class MainActivity extends AppCompatActivity {
     Runnable loadData=new Runnable() {
         @Override
         public void run() {
-
             try
             {
                 dbManager=DbManager.getDbManager(context);
@@ -218,8 +201,6 @@ public class MainActivity extends AppCompatActivity {
             }
         }
     };
-
-
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -269,19 +250,7 @@ public class MainActivity extends AppCompatActivity {
         self.setOnClickListener(listener);
         chatList = (ListView) view1.findViewById(R.id.chatList);
         friendList = (ListView) view2.findViewById(R.id.friendList);
-
-
-        /*friendList.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                friends=localUser.getFriendList();
-            }
-        });*/
     }
-
-
-
-
 
     List<Map<String ,String>> getData()
     {
@@ -295,7 +264,4 @@ public class MainActivity extends AppCompatActivity {
         }
         return  result;
     }
-
-
-
 }

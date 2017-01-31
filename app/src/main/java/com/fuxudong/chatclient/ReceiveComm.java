@@ -4,8 +4,10 @@ import android.app.Service;
 import android.content.Context;
 import android.content.Intent;
 import android.os.Binder;
+import android.os.Handler;
 import android.os.IBinder;
 import android.support.annotation.Nullable;
+import android.widget.Toast;
 
 import chatClient.ConnectionClient;
 
@@ -18,27 +20,34 @@ public class ReceiveComm extends Service
     Context context;
     ConnectionClient client;
 
-    Binder mybinder=new Binder(){
+    MyBinder binder=new MyBinder();
 
-        public void receiveMessage()
+    class MyBinder extends Binder
+    {
+        public void receiveMessage(final Handler handle)
         {
-            client.receive();
+            context=getApplicationContext();
+            client=ConnectionClient.getInstance(context);
+            client.rec.start();
+            handle.post(new Runnable() {
+                @Override
+                public void run() {
+                    Toast.makeText(context,"接受消息的线程启动",Toast.LENGTH_LONG).show();
+                }
+            });
         }
-
-    };
+    }
 
     @Nullable
     @Override
     public IBinder onBind(Intent intent)
     {
-        return mybinder;
+        return binder;
     }
 
     @Override
     public void onCreate() {
         super.onCreate();
-        context=getApplicationContext();
-        client=ConnectionClient.getInstance(context);
     }
 
     @Override

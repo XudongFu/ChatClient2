@@ -7,7 +7,6 @@ import org.w3c.dom.Node;
 
 import java.util.ArrayList;
 import java.util.Calendar;
-import java.util.Date;
 import java.util.Random;
 
 import Data.DbManager;
@@ -37,9 +36,7 @@ public class LocalUser extends User
                 +"<value><clientType>Android</clientType><id>"+id+"</id><password>"
                 +passWord+"</password></value></message>";
         Message mess=new Message(SignOnStr);
-        client.sendMessage(mess);
-
-        Message res= client.getNextMessage();
+        Message res=client.sendMessageWithConfirm(mess);
         if(res.value.getFirstChild().getNodeName().equals("success"))
         {
             return true;

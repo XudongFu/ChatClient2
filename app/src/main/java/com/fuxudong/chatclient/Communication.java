@@ -2,8 +2,10 @@ package com.fuxudong.chatclient;
 
 import android.content.Context;
 import android.os.Handler;
+import android.os.StrictMode;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
@@ -11,6 +13,10 @@ import android.widget.LinearLayout;
 import android.widget.RelativeLayout;
 import android.widget.TextView;
 import android.widget.Toast;
+
+import org.w3c.dom.Node;
+import org.w3c.dom.NodeList;
+
 import Data.DbManager;
 import Model.LocalUser;
 import Model.Message;
@@ -44,7 +50,6 @@ public class Communication extends AppCompatActivity {
         manager=DbManager.getDbManager(context);
         localUser= manager.getLocalUser();
         client=ConnectionClient.getInstance(context);
-
         if(friendId==0)
         {
             Toast.makeText(context,"获取朋友的id失败",Toast.LENGTH_LONG).show();
@@ -55,6 +60,8 @@ public class Communication extends AppCompatActivity {
             friendName=friend.name;
             friendInfo.setText(friend.name);
         }
+
+        client.registerRun(thoughThread);
 
         send.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -68,6 +75,8 @@ public class Communication extends AppCompatActivity {
                                 if ( !message.equals("")) {
                                     if( localUser.sendMessageToUser(friendId,message))
                                      {
+                                         if(!client.rec.isAlive())
+                                         client.rec.start();
                                         myHandle.post(new Runnable() {
                                             @Override
                                             public void run() {
@@ -87,7 +96,6 @@ public class Communication extends AppCompatActivity {
                         }
                 });
                 temp.start();
-
                 } catch (final Exception e) {
                     myHandle.post(new Runnable() {
                         @Override
@@ -98,22 +106,43 @@ public class Communication extends AppCompatActivity {
                 }
             }
         });
-
     }
-
 
     Runnable thoughThread=new Runnable() {
         @Override
         public void run() {
-            int count=client.queue.size();
-            for(int i=0;i<count;i++)
+            if(client.queue.size()!=0)
             {
-                Message mess=client.queue.elementAt(0);
-                client.queue.remove(0);
+                Message mess=client.queue.elementAt(client.queue.size()-1);
+                final NodeList ls=mess.getValue().getChildNodes();
+                int from=0;
+                String content="";
+                for( int i=0;i< ls.getLength();i++)
+                {
+                    switch (ls.item(i).getNodeName())
+                    {
+                        case "content":
+                            content=ls.item(i).getTextContent();
+                            break;
+                        case"from":
+                            from=Integer.valueOf(ls.item(i).getTextContent());
+                            break;
+                    }
+                }
+                if(from==friendId|| from==0)
+                {
+                    final String temp=content;
+                    myHandle.post(new Runnable() {
+                        @Override
+                        public void run() {
+                            friendhowMessage(temp,true);
+                            Log.i("","显示了一条好友消息");
+                        }
+                    });
+                }
             }
         }
     };
-
 
 
     void friendhowMessage(String message,boolean left)
@@ -136,14 +165,5 @@ public class Communication extends AppCompatActivity {
             content.setText(message);
             messageList.addView(containerRight);
         }
-
     }
-
-
-
-
-
-
-
-
 }

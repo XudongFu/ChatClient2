@@ -1,12 +1,12 @@
 package com.fuxudong.chatclient;
 
-import android.Manifest;
+import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
-import android.content.pm.PackageManager;
+import android.content.ServiceConnection;
 import android.os.Bundle;
 import android.os.Handler;
-import android.support.v4.content.ContextCompat;
+import android.os.IBinder;
 import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
 import android.view.View;
@@ -24,11 +24,13 @@ public class SignOnActivity extends AppCompatActivity {
 
     EditText idNumber;
     EditText pass;
-    Button button;
+    Button signOn;
     Context context;
     Button registerUser;
     Button test;
-    Handler solve=new Handler();
+    Handler solve;
+    ReceiveComm.MyBinder myBinder;
+    Intent ser;
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -36,20 +38,18 @@ public class SignOnActivity extends AppCompatActivity {
         context=getApplicationContext();
         idNumber= (EditText) findViewById(R.id.id);
         pass= (EditText) findViewById(R.id.passWord);
-        button= (Button) findViewById(R.id.makeSure);
+        signOn= (Button) findViewById(R.id.makeSure);
         test=(Button)findViewById(R.id.test);
-
-        button.setOnClickListener(new View.OnClickListener() {
+        registerUser= (Button) findViewById(R.id.registerUser);
+        signOn.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-
                 Thread sign=new Thread(p);
                 sign.start();
             }
         });
-
-        registerUser= (Button) findViewById(R.id.registerUser);
-
+        ser = new Intent(SignOnActivity.this, ReceiveComm.class);
+        solve=new Handler();
         registerUser.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v)
@@ -63,63 +63,65 @@ public class SignOnActivity extends AppCompatActivity {
                     }
                 });
                 re.start();
-
             }
         });
-
+        startService();
         test.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                Thread re=new Thread(new Runnable() {
-                    @Override
-                    public void run() {
-                        try
-                        {
-                            Intent p = new Intent(SignOnActivity.this, MainActivity.class);
-                            startActivity(p);
-                        }
-                        catch (final Exception e)
-                        {
-                            solve.post(new Runnable() {
-                                @Override
-                                public void run() {
-                                    System.out.printf(e.getMessage());
-                                    Toast.makeText(context,e.getMessage(),Toast.LENGTH_LONG).show();
-                                }
-                            });
-                        }
 
-                    }
-                });
-                re.start();
+            }
+        });
+    }
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        unbindService(conn);
+    }
+
+    void showMessage(final String mess) {
+        solve.post(new Runnable() {
+            @Override
+            public void run() {
+                Toast.makeText(context,mess,Toast.LENGTH_LONG).show();
             }
         });
 
     }
 
-    void shenqing()
+    ServiceConnection conn=new ServiceConnection() {
+        @Override
+        public void onServiceConnected(ComponentName name, IBinder service)
+        {
+            myBinder = (ReceiveComm.MyBinder) service;
+            myBinder.receiveMessage(solve);
+            showMessage("已经链接到服务");
+        }
+        @Override
+        public void onServiceDisconnected(ComponentName name) {
+            showMessage("服务断开");
+        }
+    };
+
+
+    void startService()
     {
-            int checkCallPhonePermission = ContextCompat.checkSelfPermission(context, Manifest.permission.INTERNET);
-            if (checkCallPhonePermission != PackageManager.PERMISSION_GRANTED) {
-                Toast.makeText(context, "我想申请权限", Toast.LENGTH_LONG).show();
-            }
+        startService(ser);
+        bindService(ser,conn , BIND_AUTO_CREATE);
+        showMessage("后台服务启动");
     }
-
-
-
-
-
 
 
     Runnable p=new Runnable() {
         @Override
         public void run() {
-
             try
             {
                 int id = Integer.valueOf(idNumber.getText().toString());
                 LocalUser user = new LocalUser(context, id, pass.getText().toString());
-                if (user.signOn()) {
+                if (user.signOn())
+                {
                     user.addToLocalUser();
                     Intent p = new Intent(SignOnActivity.this, MainActivity.class);
                     DbManager.getDbManager(context).setCurrentLocalUser(id,pass.getText().toString());
@@ -140,16 +142,12 @@ public class SignOnActivity extends AppCompatActivity {
                 solve.post(new Runnable() {
                     @Override
                     public void run() {
-                        Log.d("error", e.getMessage());
-                        e.printStackTrace();
-                        System.out.printf(e.getMessage());
                         Toast.makeText(context,e.getMessage(),Toast.LENGTH_LONG).show();
                     }
                 });
             }
         }
     };
-
 
 
 }

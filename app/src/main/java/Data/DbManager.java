@@ -126,7 +126,6 @@ public class DbManager extends SQLiteOpenHelper
                 "</version><from>" +getLocalUserId()+
                 "</from></message>";
         Message send=new Message(request);
-
         Message message=client.sendMessageWithConfirm(send);
         Node value=message.getValue();
         NodeList info= value.getChildNodes();
